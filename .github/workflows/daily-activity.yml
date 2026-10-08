@@ -20,23 +20,23 @@ jobs:
 
       - name: Update Daily Maintenance Log
         run: |
-          CURRENT_DATE=2026-10-08
-          CURRENT_TIME=2026-10-08 14:15:31 UTC
-          
+          CURRENT_DATE=$(date -u +"%Y-%m-%d")
+          CURRENT_TIME=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+
           # Ensure docs folder exists
           mkdir -p docs
           LOG_FILE="docs/MAINTENANCE_LOG.md"
 
-          if [ ! -f "" ]; then
-            echo "# FinTrack Maintenance & Activity Log" > ""
-            echo "" >> ""
-            echo "Automated daily maintenance, dependency health checks, and activity record." >> ""
-            echo "" >> ""
-            echo "| Date | Timestamp | Status | Notes |" >> ""
-            echo "| :--- | :--- | :--- | :--- |" >> ""
+          if [ ! -f "$LOG_FILE" ]; then
+            echo "# FinTrack Maintenance & Activity Log" > "$LOG_FILE"
+            echo "" >> "$LOG_FILE"
+            echo "Automated daily maintenance, dependency health checks, and activity record." >> "$LOG_FILE"
+            echo "" >> "$LOG_FILE"
+            echo "| Date | Timestamp | Status | Notes |" >> "$LOG_FILE"
+            echo "| :--- | :--- | :--- | :--- |" >> "$LOG_FILE"
           fi
 
-          echo "|  |  | Healthy | Automated daily repository maintenance run |" >> ""
+          echo "| $CURRENT_DATE | $CURRENT_TIME | Healthy | Automated daily repository maintenance run |" >> "$LOG_FILE"
 
       - name: Commit and Push Changes
         run: |
@@ -46,6 +46,6 @@ jobs:
           if git diff --staged --quiet; then
             echo "No changes to commit."
           else
-            git commit -m "chore(maintenance): automated daily log update for 2026-10-08"
+            git commit -m "chore(maintenance): automated daily log update for $(date -u +'%Y-%m-%d')"
             git push origin main
           fi
