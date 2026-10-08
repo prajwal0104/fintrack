@@ -84,8 +84,8 @@ jobs:
             "chore(telemetry): update repository telemetry benchmark status"
           )
 
-          # Shuffle messages
-          SHUFFLED=($(printf "%s\n" "${ALL_MSGS[@]}" | shuf))
+          # Shuffle messages line-by-line preserving full spaces
+          mapfile -t SHUFFLED < <(printf "%s\n" "${ALL_MSGS[@]}" | shuf)
 
           CURRENT_DATE=$(date -u +"%Y-%m-%d")
 
