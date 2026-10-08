@@ -1,0 +1,19 @@
+﻿# Node & Frontend
+node_modules/
+dist/
+dist-ssr/
+*.local
+
+# .NET & Backend
+bin/
+obj/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+.vs/
+
+# Environment & Logs
+*.log
+.DS_Store
+Thumbs.db
