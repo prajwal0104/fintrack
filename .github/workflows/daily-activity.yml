@@ -35,10 +35,11 @@ jobs:
           echo "Scheduled run: sleeping for $(( DELAY / 60 )) minutes to randomize commit time within the window."
           sleep $DELAY
 
-      - name: Generate Random Commits (Up to 20)
+      - name: Generate Random Commits (10 to 20 for Dark Green)
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          # Author as Prajwal Mahesh so GitHub attributes contributions to your profile graph
+          git config --global user.name "Prajwal Mahesh"
+          git config --global user.email "204323083+prajwal0104@users.noreply.github.com"
 
           mkdir -p docs
           LOG_FILE="docs/ACTIVITY_LOG.md"
@@ -52,11 +53,10 @@ jobs:
             echo "| :--- | :--- | :--- | :--- | :--- | :--- |" >> "$LOG_FILE"
           fi
 
-          # Randomly pick a number of commits up to 20 (between 4 and 20)
-          NUM_COMMITS=$(( 4 + (RANDOM % 17) ))
-          echo "Generating $NUM_COMMITS commits for this session."
+          # Pick between 10 and 20 commits each day to ensure darkest green contribution tier
+          NUM_COMMITS=$(( 10 + (RANDOM % 11) ))
+          echo "Generating $NUM_COMMITS commits for this session to reach dark green threshold."
 
-          # Comprehensive list of realistic commit messages
           ALL_MSGS=(
             "feat(auth): enhance JWT token expiration and claim validation"
             "refactor(controllers): optimize LINQ query execution in TransactionController"
@@ -84,7 +84,6 @@ jobs:
             "chore(telemetry): update repository telemetry benchmark status"
           )
 
-          # Shuffle messages line-by-line preserving full spaces
           mapfile -t SHUFFLED < <(printf "%s\n" "${ALL_MSGS[@]}" | shuf)
 
           CURRENT_DATE=$(date -u +"%Y-%m-%d")
