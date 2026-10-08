@@ -2,8 +2,10 @@
 
 on:
   schedule:
-    # Runs daily at 02:00 UTC (7:30 PM IST)
-    - cron: '0 2 * * *'
+    # Mon-Fri: Starts at 13:30 UTC (7:00 PM IST) with random delay up to 4 hours (7:00 PM - 11:00 PM IST)
+    - cron: '30 13 * * 1-5'
+    # Sat-Sun: Starts at 04:30 UTC (10:00 AM IST) with random delay up to 10 hours (10:00 AM - 8:30 PM IST)
+    - cron: '30 4 * * 0,6'
   workflow_dispatch: # Allows manual trigger anytime from GitHub UI
 
 permissions:
@@ -18,7 +20,22 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Generate 3 to 5 Sequential Commits
+      - name: Random Time Delay within Window
+        if: github.event_name == 'schedule'
+        run: |
+          DAY_OF_WEEK=$(date -u +%u) # 1=Mon .. 7=Sun
+          if [ "$DAY_OF_WEEK" -ge 1 ] && [ "$DAY_OF_WEEK" -le 5 ]; then
+            # Weekday: random delay 0 to 240 minutes (up to 4 hours)
+            MAX_DELAY=14400
+          else
+            # Weekend: random delay 0 to 600 minutes (up to 10 hours)
+            MAX_DELAY=36000
+          fi
+          DELAY=$(( RANDOM % MAX_DELAY ))
+          echo "Scheduled run: sleeping for $(( DELAY / 60 )) minutes to randomize commit time within the window."
+          sleep $DELAY
+
+      - name: Generate Random Commits (Up to 20)
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
@@ -31,40 +48,54 @@ jobs:
             echo "" >> "$LOG_FILE"
             echo "Automated sequential daily project maintenance and telemetry records." >> "$LOG_FILE"
             echo "" >> "$LOG_FILE"
-            echo "| Date | UTC Time | Sequence | Type | Status |" >> "$LOG_FILE"
-            echo "| :--- | :--- | :--- | :--- | :--- |" >> "$LOG_FILE"
+            echo "| Date | UTC Time | IST Approx | Sequence | Action | Status |" >> "$LOG_FILE"
+            echo "| :--- | :--- | :--- | :--- | :--- | :--- |" >> "$LOG_FILE"
           fi
 
-          # Randomly pick between 3, 4, or 5 commits
-          NUM_COMMITS=$(( 3 + (RANDOM % 3) ))
-          echo "Selected $NUM_COMMITS commits for today's run."
+          # Randomly pick a number of commits up to 20 (between 4 and 20)
+          NUM_COMMITS=$(( 4 + (RANDOM % 17) ))
+          echo "Generating $NUM_COMMITS commits for this session."
 
-          # Curated realistic commit templates
-          COMMIT_MSGS=(
-            "chore(maintenance): routine repository health and environment audit"
+          # Comprehensive list of realistic commit messages
+          ALL_MSGS=(
+            "feat(auth): enhance JWT token expiration and claim validation"
+            "refactor(controllers): optimize LINQ query execution in TransactionController"
+            "fix(budget): ensure month and year formatting consistency across endpoints"
+            "style(frontend): adjust theme color tokens and padding for dashboard"
+            "perf(db): add index optimization hints on high-frequency transactions"
+            "chore(deps): audit npm packages and verify subdependency health"
+            "test(api): add assertion cases for user authentication failure responses"
+            "docs(api): document API route schemas and query parameters"
+            "refactor(services): streamline JwtService secret parsing logic"
+            "feat(ui): refine dashboard responsive layout for mobile screens"
+            "test(migration): verify EF Core migration snapshot integrity"
+            "chore(cleanup): remove stale compiler warnings and unused using directives"
+            "perf(frontend): memoize expense list calculations in ExpenseTrack component"
             "docs(activity): update daily activity ledger and telemetry metrics"
-            "test(integrity): verify database migration snapshots and schema health"
-            "refactor(telemetry): record build and runtime telemetry benchmark"
-            "chore(deps): verify frontend and backend dependency health"
+            "style(components): normalize input field focus ring and active borders"
+            "refactor(models): align nullable property annotations with domain entities"
+            "feat(reports): improve summary calculation precision for savings goals"
+            "test(integration): validate CORS headers across development endpoints"
+            "chore(maintenance): routine repository health and environment audit"
+            "refactor(controllers): clean up async task return types in UserController"
+            "docs(readme): add local setup guidelines and development environment notes"
+            "perf(api): reduce allocation overhead in budget calculation handlers"
+            "style(landing): refine hero typography styling and button transitions"
+            "chore(telemetry): update repository telemetry benchmark status"
           )
 
-          TASK_TYPES=(
-            "Health Audit"
-            "Telemetry Update"
-            "Schema Verification"
-            "Benchmark Logging"
-            "Dependency Audit"
-          )
+          # Shuffle messages
+          SHUFFLED=($(printf "%s\n" "${ALL_MSGS[@]}" | shuf))
 
           CURRENT_DATE=$(date -u +"%Y-%m-%d")
 
           for i in $(seq 1 $NUM_COMMITS); do
             IDX=$(( i - 1 ))
-            CURRENT_TIME=$(date -u +"%H:%M:%S")
-            MSG="${COMMIT_MSGS[$IDX]}"
-            TASK="${TASK_TYPES[$IDX]}"
+            CURRENT_UTC=$(date -u +"%H:%M:%S")
+            CURRENT_IST=$(date -u -d "+5 hours +30 minutes" +"%H:%M:%S" 2>/dev/null || echo "IST")
+            MSG="${SHUFFLED[$IDX]}"
 
-            echo "| $CURRENT_DATE | $CURRENT_TIME | Step $i of $NUM_COMMITS | $TASK | Healthy |" >> "$LOG_FILE"
+            echo "| $CURRENT_DATE | $CURRENT_UTC | $CURRENT_IST | Commit $i of $NUM_COMMITS | $MSG | Verified |" >> "$LOG_FILE"
 
             git add "$LOG_FILE"
             git commit -m "$MSG"
