@@ -1,11 +1,23 @@
-﻿name: Daily Project Maintenance & Activity
+name: Daily Project Maintenance & Activity
 
 on:
   schedule:
-    # Mon-Fri: Starts at 13:30 UTC (7:00 PM IST) with random delay up to 4 hours (7:00 PM - 11:00 PM IST)
-    - cron: '30 13 * * 1-5'
-    # Sat-Sun: Starts at 04:30 UTC (10:00 AM IST) with random delay up to 10 hours (10:00 AM - 8:30 PM IST)
-    - cron: '30 4 * * 0,6'
+    # --- Weekdays (Mon-Fri) IST Windows: 7:00 PM - 11:59 PM ---
+    # Primary trigger: 14:18 UTC (~7:48 PM IST)
+    - cron: '18 14 * * 1-5'
+    # Backup trigger 1: 15:42 UTC (~9:12 PM IST)
+    - cron: '42 15 * * 1-5'
+    # Backup trigger 2: 17:23 UTC (~10:53 PM IST)
+    - cron: '23 17 * * 1-5'
+
+    # --- Weekends (Sat-Sun) IST Windows: 10:00 AM - 11:59 PM ---
+    # Primary trigger: 05:22 UTC (~10:52 AM IST)
+    - cron: '22 5 * * 0,6'
+    # Backup trigger 1: 10:37 UTC (~4:07 PM IST)
+    - cron: '37 10 * * 0,6'
+    # Backup trigger 2: 16:19 UTC (~9:49 PM IST)
+    - cron: '19 16 * * 0,6'
+
   workflow_dispatch: # Allows manual trigger anytime from GitHub UI
 
 permissions:
@@ -20,22 +32,30 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Random Time Delay within Window
-        if: github.event_name == 'schedule'
+      - name: Check Idempotency (Skip if Already Completed Today)
+        id: check-idempotency
         run: |
-          DAY_OF_WEEK=$(date -u +%u) # 1=Mon .. 7=Sun
-          if [ "$DAY_OF_WEEK" -ge 1 ] && [ "$DAY_OF_WEEK" -le 5 ]; then
-            # Weekday: random delay 0 to 240 minutes (up to 4 hours)
-            MAX_DELAY=14400
-          else
-            # Weekend: random delay 0 to 600 minutes (up to 10 hours)
-            MAX_DELAY=36000
+          LOG_FILE="docs/ACTIVITY_LOG.md"
+          CURRENT_DATE=$(date -u +"%Y-%m-%d")
+          
+          if [ "${{ github.event_name }}" = "schedule" ] && [ -f "$LOG_FILE" ]; then
+            if grep -q "| $CURRENT_DATE |" "$LOG_FILE"; then
+              echo "already_run=true" >> "$GITHUB_OUTPUT"
+              echo "Activity log already has entries for $CURRENT_DATE. Skipping run to prevent duplicate runs."
+              exit 0
+            fi
           fi
-          DELAY=$(( RANDOM % MAX_DELAY ))
-          echo "Scheduled run: sleeping for $(( DELAY / 60 )) minutes to randomize commit time within the window."
-          sleep $DELAY
+          echo "already_run=false" >> "$GITHUB_OUTPUT"
+
+      - name: Short Random Jitter Delay (0 to 3 Minutes)
+        if: github.event_name == 'schedule' && steps.check-idempotency.outputs.already_run != 'true'
+        run: |
+          JITTER=$(( RANDOM % 180 ))
+          echo "Applying short jitter of ${JITTER}s to avoid fixed-second commit bursts..."
+          sleep $JITTER
 
       - name: Generate Random Commits (10 to 20 for Dark Green)
+        if: steps.check-idempotency.outputs.already_run != 'true'
         run: |
           # Author as Prajwal Mahesh so GitHub attributes contributions to your profile graph
           git config --global user.name "Prajwal Mahesh"
@@ -98,7 +118,7 @@ jobs:
 
             git add "$LOG_FILE"
             git commit -m "$MSG"
-            sleep 2
+            sleep $(( 1 + (RANDOM % 3) ))
           done
 
           git push origin main
