@@ -54,7 +54,7 @@ jobs:
           echo "Applying short jitter of ${JITTER}s to avoid fixed-second commit bursts..."
           sleep $JITTER
 
-      - name: Generate Random Commits (10 to 20 for Dark Green)
+      - name: Generate Random Commits (1 to 8)
         if: steps.check-idempotency.outputs.already_run != 'true'
         run: |
           # Author as Prajwal Mahesh so GitHub attributes contributions to your profile graph
@@ -73,9 +73,10 @@ jobs:
             echo "| :--- | :--- | :--- | :--- | :--- | :--- |" >> "$LOG_FILE"
           fi
 
-          # Pick between 10 and 20 commits each day to ensure darkest green contribution tier
-          NUM_COMMITS=$(( 10 + (RANDOM % 11) ))
-          echo "Generating $NUM_COMMITS commits for this session to reach dark green threshold."
+          # Pick between 1 and 8 commits each day
+          NUM_COMMITS=$(( 1 + (RANDOM % 8) ))
+          echo "Generating $NUM_COMMITS commits for this session."
+
 
           ALL_MSGS=(
             "feat(auth): enhance JWT token expiration and claim validation"
